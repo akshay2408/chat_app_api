@@ -8,7 +8,7 @@ class ChatChannel < ApplicationCable::Channel
   end
 
   def create(data)
-    @current_user.messages.create(
+    @current_user.posts.create(
       content: opts.fetch('content')
     )
   end
