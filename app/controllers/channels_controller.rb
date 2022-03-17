@@ -1,5 +1,5 @@
 class ChannelsController < ApplicationController
-  before_action :set_channel, only: %i[ show update destroy fetch_members ]
+  before_action :set_channel, except: %i[ index create remove_member ]
   before_action :authorize_user
 
   # GET /channels
@@ -27,29 +27,48 @@ class ChannelsController < ApplicationController
 
   # PATCH/PUT /channels/1
   def update
-    if @channel.update(channel_params)
-      render json: @channel
+    if @channel.admin.eql? @current_user
+      if @channel.update(channel_params)
+        render json: @channel
+      else
+        render json: @channel.errors, status: :unprocessable_entity
+      end
     else
-      render json: @channel.errors, status: :unprocessable_entity
-    end
+      render json: { errors: "Only Admin can make updates" }
+    end  
   end
 
   # DELETE /channels/1
   def destroy
-    @channel.destroy
+    if @channel.admin.eql? @current_user
+      @channel.destroy
+    else
+      render json: { errors: "Only Admin can delete" } 
+    end  
   end
 
   def remove_member
     @room = Room.find(params[:id])
-    if @room.present? && (@room.channel.admin.eql? @current_user)
+    if (@room.present?) && (@room.channel.admin.eql? @current_user)
       @room.destroy
     else
-      render json: @room.errors, status: :unprocessable_entity
+      render json: {error: "The member can't be removed"}
     end  
   end
 
   def fetch_members
     render json: @channel.users
+  end  
+
+  def count_messages
+    render json: {
+      count: @channel.posts.count,
+      last_message_at: @channel.posts.last.created_at,
+    }
+  end  
+
+  def all_messages
+    render json: @channel.posts
   end  
 
   private

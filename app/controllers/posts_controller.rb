@@ -1,5 +1,5 @@
 class PostsController < ApplicationController
-  before_action :set_post, only: %i[ show update destroy ]
+  before_action :set_post, only: %i[ show update destroy read_message ]
   before_action :authorize_user
   before_action :set_channel, only: %i[ create ]
   after_action :create_member, only: %i[ create ]
@@ -38,11 +38,24 @@ class PostsController < ApplicationController
 
   # DELETE /posts/1
   def destroy
-    @post.destroy
+    if (@post.user.eql? @current_user) || (@post.channel.admin.eql? @current_user)
+      @post.destroy
+      render json: { errors: "Message has been deleted" }
+    else 
+      render json: { errors: "Message can only be deleted by either admin or owner of message" }
+    end  
   end
 
   def create_member
     @room = Room.create(user: @current_user, channel: @channel)
+  end  
+
+  def read_message
+    if @post.update(read_status: true)
+      render json: @post
+    else
+      render json: @post.errors, status: :unprocessable_entity
+    end
   end  
 
   private
